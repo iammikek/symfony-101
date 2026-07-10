@@ -1,0 +1,66 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}Items{% endblock %}
+
+{% block body %}
+<div class="page-header">
+  <div>
+    <h1>Items</h1>
+    <p class="muted">{{ total_count }} total · page {{ page }} of {{ total_pages }}</p>
+  </div>
+  {% if app.user %}
+    <a class="button" href="{{ path('shop_item_create') }}">Add item</a>
+  {% endif %}
+</div>
+
+<form method="get" class="filter-form panel">
+  <h2>Filter</h2>
+  <div class="field-grid">
+    {{ form_row(filter_form.name_contains) }}
+    {{ form_row(filter_form.category) }}
+    {{ form_row(filter_form.min_price) }}
+    {{ form_row(filter_form.max_price) }}
+  </div>
+  <div class="actions">
+    <button type="submit" class="button">Apply</button>
+    <a class="button secondary" href="{{ path('shop_item_list') }}">Clear</a>
+  </div>
+  {{ form_rest(filter_form) }}
+</form>
+
+<section class="panel">
+  {% if items|length > 0 %}
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Category</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+          <tr>
+            <td><a href="{{ path('shop_item_detail', {id: item.id}) }}">{{ item.name }}</a></td>
+            <td>{{ item.category ? item.category.name : '—' }}</td>
+            <td>${{ item.price }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    {% if total_pages > 1 %}
+      <nav class="pagination">
+        {% if page > 1 %}
+          <a href="{{ path('shop_item_list', query_params|merge({page: page - 1})) }}">← Previous</a>
+        {% endif %}
+        {% if page < total_pages %}
+          <a href="{{ path('shop_item_list', query_params|merge({page: page + 1})) }}">Next →</a>
+        {% endif %}
+      </nav>
+    {% endif %}
+  {% else %}
+    <p>No items match your filters.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -4,7 +4,7 @@ A step-by-step **Symfony 7 + Doctrine** port of [fastAPI-101](https://github.com
 
 **Audience:** Laravel developers who want to learn Symfony without leaving PHP. You already know routes, Eloquent, migrations, middleware, and FormRequests — this repo maps those ideas directly.
 
-**API-only:** Symfony owns the JSON API and business logic. There is no admin UI or server-rendered shop (those are django-101’s monolith extras).
+**Monolith UI:** Symfony owns the JSON API plus a **server-rendered shop** at `/shop` (Twig + forms + session auth) — see **[docs/frontend.md](docs/frontend.md)**. Same pattern planned for laravel-101.
 
 ---
 
@@ -19,9 +19,10 @@ A step-by-step **Symfony 7 + Doctrine** port of [fastAPI-101](https://github.com
 7. **Item stats** — `GET /items/stats/summary` with per-category breakdown
 8. **JWT auth** — Bearer tokens on write endpoints (register/login/me)
 9. **Rate limiting** — 10/min auth, 60/min writes (Symfony RateLimiter)
-10. **SQLite locally** — PostgreSQL in Docker (port **8002**)
-11. **Tests** — PHPUnit feature tests (19 tests)
-12. **CI** — GitHub Actions
+10. **Catalog Shop** — server-rendered HTML at `/shop` (Twig, forms, session auth) — see **[docs/frontend.md](docs/frontend.md)**
+11. **SQLite locally** — PostgreSQL in Docker (port **8002**)
+12. **Tests** — PHPUnit feature tests (28 tests)
+13. **CI** — GitHub Actions
 
 ---
 
@@ -45,7 +46,8 @@ A step-by-step **Symfony 7 + Doctrine** port of [fastAPI-101](https://github.com
 16. [Step 13: Error responses](#16-step-13-error-responses)
 17. [Step 14: PostgreSQL (Docker)](#17-step-14-postgresql-docker)
 18. [Step 15: CI](#18-step-15-ci)
-19. [Quick Reference](#19-quick-reference)
+19. [Step 16: Server-rendered shop](#19-step-16-server-rendered-shop)
+20. [Quick Reference](#20-quick-reference)
 
 ---
 
@@ -63,7 +65,8 @@ make serve
 ```
 
 Open **http://127.0.0.1:8002/** — root message  
-**http://127.0.0.1:8002/items** — item list JSON (empty)
+**http://127.0.0.1:8002/items** — item list JSON (empty)  
+**http://127.0.0.1:8002/shop** — browser UI (register, browse, add items)
 
 ### Docker (PostgreSQL)
 
@@ -102,18 +105,22 @@ symfony-101/
 │   │   ├── HealthController.php
 │   │   ├── AuthController.php
 │   │   ├── ItemController.php
-│   │   └── CategoryController.php
+│   │   ├── CategoryController.php
+│   │   └── Shop/               # Twig views (/shop)
+│   ├── Form/                   # HTML forms for shop
 │   ├── Entity/                 # Doctrine entities (Eloquent models)
 │   ├── Service/                # Business logic
 │   ├── Repository/             # Custom queries
-│   ├── Serializer/ApiSerializer.php  # JSON shape (API Resources)
-│   ├── Exception/              # Domain exceptions
-│   └── EventSubscriber/ApiExceptionSubscriber.php
+│   ├── Serializer/ApiSerializer.php
+│   ├── Exception/
+│   └── EventSubscriber/
+├── templates/shop/             # Twig templates
+├── public/shop/style.css
+├── docs/frontend.md
 ├── tests/
-│   ├── ApiTestCase.php         # Base test + JWT helpers
-│   └── Feature/                # HTTP integration tests
+│   ├── ApiTestCase.php
+│   └── Feature/                # API + shop tests
 ├── docker-compose.yml
-├── Dockerfile
 ├── Makefile
 └── README.md
 ```
@@ -360,7 +367,7 @@ protected function bearerHeaders(KernelBrowser $client): array
 php bin/phpunit
 ```
 
-**19 tests** covering health, auth, items list/create/delete, and categories.
+**28 tests** covering health, auth, items, categories, and shop pages.
 
 **Laravel parallel:** Pest feature tests with `$this->actingAs($user)` — here we register + login to get a real JWT.
 
@@ -637,7 +644,38 @@ docker compose exec database psql -U app -d app -c "\dt"
 
 ---
 
-## 19. Quick Reference
+## 19. Step 16: Server-rendered shop
+
+A **Catalog Shop** at `/shop` demonstrates full-stack Symfony alongside the JSON API:
+
+| Shop (browser) | API (JSON) |
+|----------------|------------|
+| `/shop/register` — signup + auto-login | `POST /auth/register` — JSON only |
+| `/shop/login` — session cookie | `POST /auth/login` — JWT |
+| `/shop/items` — HTML table + filters | `GET /items` — JSON list |
+| `/shop/items/new` — HTML form | `POST /items` — Bearer token |
+
+The shop calls **`ItemService` and `UserService` directly** — it does not fetch `/items`. Same monolith pattern as django-101 and the laravel-101 shop you will build next.
+
+**Key pieces:**
+
+- **Twig templates** in `templates/shop/`
+- **Symfony Forms** in `src/Form/`
+- **Dual firewalls** in `security.yaml` — `shop` (session + form_login) before `api` (JWT)
+- **Flash messages** via `ShopFlashSubscriber`
+
+**Full walkthrough:** **[docs/frontend.md](docs/frontend.md)**
+
+```bash
+make serve
+# http://127.0.0.1:8002/shop/register
+```
+
+**Laravel parallel (for laravel-101):** Blade views + `web` middleware + session auth, sharing the same services as API routes.
+
+---
+
+## 20. Quick Reference
 
 | Goal | Command |
 |------|---------|
@@ -646,6 +684,8 @@ docker compose exec database psql -U app -d app -c "\dt"
 | Install deps | `composer install` |
 | Migrate | `php bin/console doctrine:migrations:migrate` |
 | Run local (SQLite) | `make serve` → http://127.0.0.1:8002 |
+| Open shop UI | http://127.0.0.1:8002/shop |
+| Frontend docs | [docs/frontend.md](docs/frontend.md) |
 | Run tests | `php bin/phpunit` |
 | Docker + Postgres | `docker compose up --build` |
 | Stop Docker | `docker compose down` |
@@ -689,6 +729,7 @@ Run both side by side:
 | Port (local/Docker) | 8000 | 8002 |
 | Root message | `Hello from FastAPI!` | `Hello from symfony-101` |
 | API shape | Same endpoints | Same endpoints |
+| Browser shop | No | `/shop` |
 | OpenAPI docs | `/docs` | Not included (future step) |
 | Admin UI | No | No |
 | Language | Python | PHP |
@@ -699,7 +740,7 @@ Run both side by side:
 |------|------|-------|
 | fastAPI-101 | 8000 | Python reference API |
 | django-101 | 8001 | Python monolith + admin + shop |
-| **symfony-101** | **8002** | **PHP API (Laravel crossover)** |
+| **symfony-101** | **8002** | **PHP API + shop (Laravel crossover)** |
 | go-101 | 8000 | Go port |
 | orchestr-101 | 3000 | Laravel-style Node |
 

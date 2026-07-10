@@ -1,0 +1,21 @@
+{% extends 'base.html.twig' %}
+
+{% block title %}{{ page_title|default('Add item') }}{% endblock %}
+
+{% block body %}
+<section class="panel narrow">
+  <h1>{{ page_title|default('Add item') }}</h1>
+  <p class="muted">Session login required. Submits a normal HTML form with CSRF protection.</p>
+
+  {{ form_start(form) }}
+    {{ form_row(form.name) }}
+    {{ form_row(form.description) }}
+    {{ form_row(form.price) }}
+    {{ form_row(form.category) }}
+    <div class="actions">
+      <button type="submit" class="button">Save item</button>
+      <a class="button secondary" href="{{ path('shop_item_list') }}">Cancel</a>
+    </div>
+  {{ form_end(form) }}
+</section>
+{% endblock %}
