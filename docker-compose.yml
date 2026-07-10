@@ -1,0 +1,36 @@
+services:
+  database:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: app
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app -d app"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    depends_on:
+      database:
+        condition: service_healthy
+    ports:
+      - "8002:8000"
+    environment:
+      APP_ENV: dev
+      APP_SECRET: docker-dev-secret
+      DATABASE_URL: postgresql://app:app@database:5432/app?serverVersion=16&charset=utf8
+      JWT_SECRET_KEY: /app/config/jwt/private.pem
+      JWT_PUBLIC_KEY: /app/config/jwt/public.pem
+      JWT_PASSPHRASE: ""
+    volumes:
+      - ./config/jwt:/app/config/jwt:ro
+
+volumes:
+  postgres_data:
