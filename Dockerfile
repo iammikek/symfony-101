@@ -20,4 +20,4 @@ RUN composer dump-autoload --optimize --classmap-authoritative
 
 EXPOSE 8000
 
-CMD ["sh", "-c", "php bin/console doctrine:migrations:migrate --no-interaction && php -S 0.0.0.0:8000 -t public public/index.php"]
+CMD ["sh", "-c", "php bin/console doctrine:migrations:migrate --no-interaction && php -S 0.0.0.0:8000 -t public public/router.php"]

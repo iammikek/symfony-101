@@ -4,7 +4,7 @@ test:
 	php bin/phpunit
 
 serve:
-	php -S 127.0.0.1:8002 -t public public/index.php
+	php -S 127.0.0.1:8002 -t public public/router.php
 
 migrate:
 	php bin/console doctrine:migrations:migrate --no-interaction
