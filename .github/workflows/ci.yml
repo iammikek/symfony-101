@@ -23,6 +23,9 @@ jobs:
       - name: Generate JWT keys
         run: bash bin/generate-jwt-keys.sh
 
+      - name: Prepare environment file
+        run: cp .env.example .env
+
       - name: Install dependencies
         run: composer install --no-interaction --prefer-dist
 
