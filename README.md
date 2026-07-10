@@ -4,24 +4,52 @@ A step-by-step **Symfony 7 + Doctrine** port of [fastAPI-101](https://github.com
 
 **Audience:** Laravel developers who want to learn Symfony without leaving PHP. You already know routes, Eloquent, migrations, middleware, and FormRequests — this repo maps those ideas directly.
 
+**API-only:** Symfony owns the JSON API and business logic. There is no admin UI or server-rendered shop (those are django-101’s monolith extras).
+
 ---
 
 ## What's Included
 
-1. **Symfony 7 API** — attribute routes, controllers, service layer
-2. **Doctrine ORM** — `Category`, `Item`, `User` entities + migrations
-3. **JWT auth** — register, login, Bearer tokens on write endpoints (LexikJWTAuthenticationBundle)
-4. **Pagination metadata** — `{ items, total, skip, limit }` on list endpoints
-5. **Filtering** — `min_price`, `max_price`, `category_id`, `name_contains` on `GET /items`
-6. **Item stats** — `GET /items/stats/summary` with per-category breakdown
-7. **Rate limiting** — 10/min auth, 60/min writes (Symfony RateLimiter)
-8. **SQLite locally** — PostgreSQL in Docker (port **8002**)
-9. **Tests** — PHPUnit feature tests (19 tests)
-10. **CI** — GitHub Actions
+1. **Symfony 7 project** — attribute routes, autowired services, `config/packages/`
+2. **`User` entity** — email login, register/login/me, JWT (LexikJWTAuthenticationBundle)
+3. **`Category` + `Item` entities** — Doctrine ORM, repositories, service layer
+4. **Service layer** — `src/Service/` (mirrors fastAPI-101 business logic)
+5. **Pagination** — `{ items, total, skip, limit }` (same shape as FastAPI Step 20)
+6. **Filtering** — `min_price`, `max_price`, `category_id`, `name_contains` on `GET /items`
+7. **Item stats** — `GET /items/stats/summary` with per-category breakdown
+8. **JWT auth** — Bearer tokens on write endpoints (register/login/me)
+9. **Rate limiting** — 10/min auth, 60/min writes (Symfony RateLimiter)
+10. **SQLite locally** — PostgreSQL in Docker (port **8002**)
+11. **Tests** — PHPUnit feature tests (19 tests)
+12. **CI** — GitHub Actions
 
 ---
 
-## Quick Start
+## Table of Contents
+
+1. [Quick Start](#1-quick-start)
+2. [Project Structure](#2-project-structure)
+3. [Framework maps](#3-framework-maps)
+4. [Step 1: Project setup](#4-step-1-project-setup)
+5. [Step 2: Health routes](#5-step-2-health-routes)
+6. [Step 3: Item entity + migrations](#6-step-3-item-entity--migrations)
+7. [Step 4: Service layer](#7-step-4-service-layer)
+8. [Step 5: Item controller (CRUD)](#8-step-5-item-controller-crud)
+9. [Step 6: Tests](#9-step-6-tests)
+10. [Step 7: Categories + FK](#10-step-7-categories--fk)
+11. [Step 8: Filtering](#11-step-8-filtering)
+12. [Step 9: Pagination metadata](#12-step-9-pagination-metadata)
+13. [Step 10: Item stats capstone](#13-step-10-item-stats-capstone)
+14. [Step 11: JWT authentication](#14-step-11-jwt-authentication)
+15. [Step 12: Rate limiting](#15-step-12-rate-limiting)
+16. [Step 13: Error responses](#16-step-13-error-responses)
+17. [Step 14: PostgreSQL (Docker)](#17-step-14-postgresql-docker)
+18. [Step 15: CI](#18-step-15-ci)
+19. [Quick Reference](#19-quick-reference)
+
+---
+
+## 1. Quick Start
 
 ### Local PHP (SQLite)
 
@@ -56,29 +84,34 @@ php bin/phpunit
 
 ---
 
-## Project Structure
+## 2. Project Structure
 
 ```
 symfony-101/
 ├── bin/
-│   ├── console
-│   └── generate-jwt-keys.sh
+│   ├── console                 # Symfony CLI (Laravel artisan)
+│   └── generate-jwt-keys.sh    # RSA keys for Lexik JWT
 ├── config/
-│   ├── packages/           # security, doctrine, rate_limiter, jwt, cors
-│   └── jwt/                # RSA keys (gitignored, generate locally)
-├── migrations/             # Doctrine migrations (Laravel migrations/)
-├── public/index.php        # Front controller (Laravel public/index.php)
+│   ├── packages/               # security, doctrine, rate_limiter, jwt, cors
+│   ├── routes.yaml             # loads src/Controller/* attributes
+│   └── jwt/                    # RSA keys (gitignored)
+├── migrations/                 # Doctrine migrations
+├── public/index.php            # Front controller (Laravel public/index.php)
 ├── src/
-│   ├── Controller/         # HTTP layer (Laravel controllers)
-│   ├── Entity/             # Doctrine entities (Eloquent models)
-│   ├── Service/            # Business logic (Laravel services)
-│   ├── Repository/         # Custom queries (Eloquent scopes)
-│   ├── Serializer/         # API response shaping (API Resources)
-│   ├── Exception/          # Domain exceptions
-│   └── EventSubscriber/      # Global error handler (Laravel Handler)
+│   ├── Controller/             # HTTP layer
+│   │   ├── HealthController.php
+│   │   ├── AuthController.php
+│   │   ├── ItemController.php
+│   │   └── CategoryController.php
+│   ├── Entity/                 # Doctrine entities (Eloquent models)
+│   ├── Service/                # Business logic
+│   ├── Repository/             # Custom queries
+│   ├── Serializer/ApiSerializer.php  # JSON shape (API Resources)
+│   ├── Exception/              # Domain exceptions
+│   └── EventSubscriber/ApiExceptionSubscriber.php
 ├── tests/
-│   ├── ApiTestCase.php     # Base test + auth helpers
-│   └── Feature/            # HTTP integration tests
+│   ├── ApiTestCase.php         # Base test + JWT helpers
+│   └── Feature/                # HTTP integration tests
 ├── docker-compose.yml
 ├── Dockerfile
 ├── Makefile
@@ -87,36 +120,39 @@ symfony-101/
 
 ---
 
-## Laravel ↔ Symfony map
-
-| Laravel | symfony-101 |
-|---------|-------------|
-| `routes/api.php` | `#[Route]` attributes on controllers |
-| `php artisan make:controller` | `php bin/console make:controller` |
-| Eloquent `Model` | Doctrine `#[Entity]` |
-| `php artisan migrate` | `php bin/console doctrine:migrations:migrate` |
-| API Resources | `ApiSerializer` (or Symfony Serializer groups) |
-| FormRequest validation | Symfony Validator `Assert` constraints |
-| `auth:sanctum` | JWT + `#[IsGranted('ROLE_USER')]` |
-| `throttle:10,1` | RateLimiter (`auth_api`, `write_api`) |
-| `app/Services/` | `src/Service/` |
-| `tests/Feature/` | `tests/Feature/` (PHPUnit WebTestCase) |
-| `Handler.php` exceptions | `ApiExceptionSubscriber` |
+## 3. Framework maps
 
 | fastAPI-101 | symfony-101 |
 |-------------|-------------|
-| `APIRouter` | Controller classes + `#[Route]` |
-| Pydantic schemas | Validator constraints + manual DTO parsing |
-| SQLAlchemy models | Doctrine entities |
+| `app/main.py` | `config/` + `src/Kernel.php` |
+| `APIRouter` | Controller classes + `#[Route]` attributes |
+| Pydantic schemas | Symfony Validator + `ApiSerializer` |
+| SQLAlchemy models | Doctrine `#[Entity]` |
 | Alembic | Doctrine migrations |
 | `Depends(get_current_user)` | `#[IsGranted('ROLE_USER')]` |
 | `python-jose` JWT | LexikJWTAuthenticationBundle |
 | `slowapi` | Symfony RateLimiter |
 | pytest + TestClient | PHPUnit + WebTestCase |
 
+| Laravel | symfony-101 |
+|---------|-------------|
+| `routes/api.php` | `#[Route]` on controllers (`config/routes.yaml` loads them) |
+| `php artisan` | `php bin/console` |
+| `php artisan make:model Item -m` | `make:entity` + `make:migration` |
+| Eloquent | Doctrine ORM |
+| API Resources | `ApiSerializer` |
+| FormRequest | Validator `Assert` constraints in controller |
+| `auth:sanctum` | JWT firewall + `#[IsGranted('ROLE_USER')]` |
+| `throttle:10,1` | `auth_api` / `write_api` rate limiters |
+| `app/Services/` | `src/Service/` (autowired) |
+| `Handler.php` | `ApiExceptionSubscriber` |
+| Pest/PHPUnit Feature tests | `tests/Feature/` + `ApiTestCase` |
+
 ---
 
-## Step 1: Project setup
+## 4. Step 1: Project setup
+
+This repo was bootstrapped with:
 
 ```bash
 composer create-project symfony/skeleton:"7.2.*" symfony-101
@@ -126,18 +162,71 @@ composer require symfony/orm-pack symfony/validator symfony/serializer \
 composer require --dev symfony/maker-bundle phpunit/phpunit symfony/browser-kit
 ```
 
-**Laravel parallel:** `composer create-project laravel/laravel` + installing Sanctum/Passport.
+**Symfony gotcha:** RateLimiter requires the Lock component. Add `LOCK_DSN=flock` to `.env` (see `.env.example`).
+
+**Laravel parallel:** `composer create-project laravel/laravel` + Sanctum/Passport.
+
+**Verify:**
+
+```bash
+php bin/console about
+```
 
 ---
 
-## Step 2: Entities + migrations
+## 5. Step 2: Health routes
 
-**`src/Entity/Item.php`** — Doctrine entity with `Category` many-to-one:
+**`src/Controller/HealthController.php`** — root and health check (like fastAPI-101 `/` and `/health`):
+
+```php
+#[Route('/', name: 'root', methods: ['GET'])]
+public function root(): JsonResponse
+{
+    return new JsonResponse(['message' => 'Hello from symfony-101']);
+}
+
+#[Route('/health', name: 'health', methods: ['GET'])]
+public function health(): JsonResponse
+{
+    return new JsonResponse(['status' => 'ok']);
+}
+```
+
+Routes are discovered from attributes via `config/routes.yaml`:
+
+```yaml
+controllers:
+    resource:
+        path: ../src/Controller/
+        namespace: App\Controller
+    type: attribute
+```
+
+**Laravel parallel:** two routes in `routes/api.php` pointing at a `HealthController`.
+
+**Verify:**
+
+```bash
+curl http://127.0.0.1:8002/
+curl http://127.0.0.1:8002/health
+```
+
+---
+
+## 6. Step 3: Item entity + migrations
+
+**`src/Entity/Item.php`** — Doctrine entity (Eloquent equivalent):
 
 ```php
 #[ORM\Entity(repositoryClass: ItemRepository::class)]
+#[ORM\Table(name: 'items')]
 class Item
 {
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
     #[ORM\Column(length: 255)]
     private string $name;
 
@@ -149,34 +238,59 @@ class Item
 }
 ```
 
+Generate and run migration:
+
 ```bash
 php bin/console make:migration
 php bin/console doctrine:migrations:migrate
 ```
 
+**Symfony gotcha:** Doctrine stores decimals as strings in PHP (`"9.99"`), not floats. Cast to `float` in JSON responses.
+
 **Laravel parallel:** `php artisan make:model Item -m`
+
+**Verify:**
+
+```bash
+php bin/console doctrine:schema:validate
+```
 
 ---
 
-## Step 3: Service layer
+## 7. Step 4: Service layer
 
-Business logic lives in `src/Service/`, not controllers — same pattern as Laravel injecting a `ItemService`:
+Business logic lives in **`src/Service/`**, not controllers — same pattern as injecting an `ItemService` in Laravel.
+
+**`src/Service/ItemService.php`** handles queries, validation of FKs, and stats:
 
 ```php
-// src/Service/ItemService.php
 public function listItems(int $skip, int $limit, array $filters = []): array
 {
-    // Query builder with filters, pagination, total count
+    $qb = $this->itemRepository->createQueryBuilder('i')
+        ->leftJoin('i.category', 'c')
+        ->addSelect('c');
+
+    if (isset($filters['min_price'])) {
+        $qb->andWhere('i.price >= :min_price')->setParameter('min_price', (string) $filters['min_price']);
+    }
+    // ... max_price, category_id, name_contains
+
+    $total = /* count query */;
+    $rows = $qb->setFirstResult($skip)->setMaxResults($limit)->getQuery()->getResult();
+
+    return [$rows, $total];
 }
 ```
 
-Controllers stay thin: validate input, call service, return JSON.
+Controllers stay thin: validate input → call service → return JSON via `ApiSerializer`.
+
+**Laravel parallel:** `app/Services/ItemService.php` called from a slim controller.
 
 ---
 
-## Step 4: Controllers + routes
+## 8. Step 5: Item controller (CRUD)
 
-Symfony 7 uses PHP attributes instead of a routes file:
+**`src/Controller/ItemController.php`** — class-level route prefix:
 
 ```php
 #[Route('/items')]
@@ -185,77 +299,360 @@ class ItemController extends AbstractController
     #[Route('', methods: ['GET'])]
     public function list(Request $request): JsonResponse { ... }
 
+    #[Route('/stats/summary', methods: ['GET'])]
+    public function stats(): JsonResponse { ... }
+
+    #[Route('/{itemId}', methods: ['GET'], requirements: ['itemId' => '\d+'])]
+    public function show(int $itemId): JsonResponse { ... }
+
     #[Route('', methods: ['POST'])]
     #[IsGranted('ROLE_USER')]
     public function create(Request $request): JsonResponse { ... }
 }
 ```
 
-**Laravel parallel:** `Route::apiResource('items', ItemController::class)` with `auth:sanctum` middleware on writes.
+| Method | Path | Auth |
+|--------|------|------|
+| GET | `/items` | Public |
+| GET | `/items/{id}` | Public |
+| GET | `/items/stats/summary` | Public |
+| POST | `/items` | JWT |
+| PATCH | `/items/{id}` | JWT |
+| DELETE | `/items/{id}` | JWT |
+
+**Symfony gotcha:** Define `/stats/summary` **before** `/{itemId}` or Symfony will treat `"stats"` as an ID. We use a dedicated route method with a static path segment.
+
+**Laravel parallel:** `Route::apiResource('items', ItemController::class)` + `Route::get('items/stats/summary', ...)`.
+
+**Verify** (after Step 11 JWT):
+
+```bash
+curl http://127.0.0.1:8002/items
+# {"items":[],"total":0,"skip":0,"limit":10}
+```
 
 ---
 
-## Step 5: JWT authentication
+## 9. Step 6: Tests
 
-1. Generate RSA keys: `bash bin/generate-jwt-keys.sh`
-2. Configure `lexik_jwt_authentication.yaml`
-3. `security.yaml` — stateless `jwt` firewall
-4. `AuthController` — `POST /auth/register`, `POST /auth/login`, `GET /auth/me`
+**`tests/ApiTestCase.php`** — shared helpers (Laravel `TestCase` equivalent):
 
-Login accepts OAuth2 form fields (`username` = email, `password`) like fastAPI-101:
+```php
+protected function createAuthenticatedClient(): KernelBrowser
+{
+    $client = static::createClient();
+    $this->resetDatabase();
+    $client->request('POST', '/auth/register', ...);
+    $client->request('POST', '/auth/login', parameters: ['username' => '...', 'password' => '...']);
+    return $client;
+}
 
-```bash
-curl -X POST http://127.0.0.1:8002/auth/login \
-  -d 'username=alice@example.com&password=password123'
+protected function bearerHeaders(KernelBrowser $client): array
+{
+    $data = json_decode($client->getResponse()->getContent(), true);
+    return ['HTTP_AUTHORIZATION' => 'Bearer ' . $data['access_token']];
+}
 ```
 
-Returns `{ "access_token": "...", "token_type": "bearer" }`.
-
-Protected writes:
+**`tests/bootstrap.php`** runs Doctrine migrations once in the `test` environment.
 
 ```bash
+php bin/phpunit
+```
+
+**19 tests** covering health, auth, items list/create/delete, and categories.
+
+**Laravel parallel:** Pest feature tests with `$this->actingAs($user)` — here we register + login to get a real JWT.
+
+---
+
+## 10. Step 7: Categories + FK
+
+**`src/Entity/Category.php`** + nullable `Item.category` many-to-one.
+
+Business rules in **`src/Service/CategoryService.php`**:
+
+| Rule | Exception | HTTP |
+|------|-----------|------|
+| Duplicate category name | `CategoryNameExistsException` | 409 `CATEGORY_NAME_EXISTS` |
+| Delete category with items | `CategoryInUseException` | 409 `CATEGORY_IN_USE` |
+| Invalid `category_id` on item | `CategoryNotFoundException` | 404 `CATEGORY_NOT_FOUND` |
+
+**Verify:**
+
+```bash
+# After login (see Step 11)
+curl -X POST http://127.0.0.1:8002/categories \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"name":"Tools","description":"Hand tools"}'
+```
+
+---
+
+## 11. Step 8: Filtering
+
+`GET /items?min_price=10&category_id=1&name_contains=widget`
+
+Implemented in `ItemService::listItems()` with Doctrine query builder:
+
+- `min_price` / `max_price` — `i.price >=` / `<=`
+- `category_id` — `i.category = :category_id`
+- `name_contains` — `LOWER(i.name) LIKE` (case-insensitive)
+
+Invalid query params → **422** (Validator on the controller).
+
+**Laravel parallel:** local scopes / `$query->when($request->min_price, ...)`.
+
+**Verify:**
+
+```bash
+curl "http://127.0.0.1:8002/items?min_price=10&name_contains=widget"
+```
+
+---
+
+## 12. Step 9: Pagination metadata
+
+Same response shape as fastAPI-101 and django-101:
+
+```json
+{
+  "items": [ ... ],
+  "total": 42,
+  "skip": 0,
+  "limit": 10
+}
+```
+
+Query params: `skip` (≥0), `limit` (1–100). Invalid values → **422**.
+
+**Verify:**
+
+```bash
+curl "http://127.0.0.1:8002/items?skip=0&limit=5"
+```
+
+---
+
+## 13. Step 10: Item stats capstone
+
+`GET /items/stats/summary` — aggregates in `ItemService::getStats()`:
+
+```json
+{
+  "total_items": 5,
+  "average_price": 12.5,
+  "min_price": 5.0,
+  "max_price": 20.0,
+  "uncategorized_count": 1,
+  "by_category": [
+    {
+      "category_id": 1,
+      "category_name": "Tools",
+      "item_count": 2,
+      "average_price": 10.0
+    }
+  ]
+}
+```
+
+Empty database returns zeros and `null` min/max — same as fastAPI-101.
+
+**Verify:**
+
+```bash
+curl http://127.0.0.1:8002/items/stats/summary
+```
+
+---
+
+## 14. Step 11: JWT authentication
+
+### Generate keys
+
+JWT keys are **not** in git. Generate locally and in CI:
+
+```bash
+bash bin/generate-jwt-keys.sh
+```
+
+Creates `config/jwt/private.pem` and `config/jwt/public.pem`.
+
+### Security config
+
+**`config/packages/security.yaml`** — stateless JWT firewall:
+
+```yaml
+firewalls:
+    api:
+        pattern: ^/
+        stateless: true
+        provider: app_user_provider
+        jwt: ~
+```
+
+Write endpoints use `#[IsGranted('ROLE_USER')]` on controller methods (like applying `auth:sanctum` to specific actions).
+
+### Auth endpoints
+
+| Endpoint | Purpose |
+|----------|---------|
+| `POST /auth/register` | `{ email, password }` → 201 |
+| `POST /auth/login` | form `username` + `password` — **username = email** (FastAPI parity) |
+| `GET /auth/me` | Bearer token required |
+
+**Try it:**
+
+```bash
+# Register
+curl -X POST http://127.0.0.1:8002/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"password123"}'
+
+# Login (OAuth2-style form fields, like fastAPI-101)
+curl -X POST http://127.0.0.1:8002/auth/login \
+  -d 'username=you@example.com&password=password123'
+
+# Create item
 curl -X POST http://127.0.0.1:8002/items \
-  -H "Authorization: Bearer <token>" \
+  -H "Authorization: Bearer TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"name":"Widget","price":9.99}'
 ```
 
-**Laravel parallel:** Sanctum token issuance + `auth:sanctum` middleware.
+**Laravel parallel:** Sanctum personal access tokens — here Lexik issues a JWT instead.
 
 ---
 
-## Step 6: Error responses
+## 15. Step 12: Rate limiting
 
-`ApiExceptionSubscriber` returns the same `{ detail, code }` shape as fastAPI-101:
+**`config/packages/rate_limiter.yaml`:**
+
+```yaml
+framework:
+    rate_limiter:
+        auth_api:
+            policy: 'fixed_window'
+            limit: 10
+            interval: '1 minute'
+        write_api:
+            policy: 'fixed_window'
+            limit: 60
+            interval: '1 minute'
+```
+
+Injected into controllers via `config/services.yaml`:
+
+```yaml
+App\Controller\AuthController:
+    bind:
+        $authApiLimiter: '@limiter.auth_api'
+```
+
+| Endpoint group | Limit |
+|----------------|-------|
+| `/auth/register`, `/auth/login` | 10/minute per IP |
+| POST/PATCH/DELETE on items & categories | 60/minute per IP |
+
+**429 response:** `{ "detail": "Rate limit exceeded", "code": "RATE_LIMIT_EXCEEDED" }`
+
+**Symfony gotcha:** RateLimiter needs Lock. Set in `.env`:
+
+```env
+LOCK_DSN=flock
+```
+
+Without this, controllers fail to instantiate with `Environment variable not found: "LOCK_DSN"`.
+
+**Laravel parallel:** `throttle:10,1` middleware.
+
+Rate limits are **disabled in the `test` environment** so PHPUnit stays fast.
+
+---
+
+## 16. Step 13: Error responses
+
+**`src/EventSubscriber/ApiExceptionSubscriber.php`** maps domain exceptions to the same `{ detail, code }` JSON as fastAPI-101:
 
 | Status | Code | When |
 |--------|------|------|
 | 404 | `ITEM_NOT_FOUND` | Missing item |
 | 404 | `CATEGORY_NOT_FOUND` | Missing category |
 | 409 | `CATEGORY_NAME_EXISTS` | Duplicate category name |
+| 409 | `CATEGORY_IN_USE` | Category has items |
 | 409 | `USER_EMAIL_EXISTS` | Duplicate email |
 | 429 | `RATE_LIMIT_EXCEEDED` | Too many requests |
 
----
+**Laravel parallel:** `app/Exceptions/Handler.php` rendering JSON for API requests.
 
-## Step 7: Tests
-
-PHPUnit feature tests mirror fastAPI-101 coverage:
+**Verify:**
 
 ```bash
-php bin/phpunit
+curl http://127.0.0.1:8002/items/999
+# {"detail":"Item not found","code":"ITEM_NOT_FOUND"}
 ```
-
-`tests/ApiTestCase.php` provides:
-- `resetDatabase()` between tests
-- `createAuthenticatedClient()` — register + login
-- `bearerHeaders()` — JWT for protected endpoints
-
-**Laravel parallel:** Pest/PHPUnit feature tests with `$this->actingAs($user)`.
 
 ---
 
-## API Endpoints
+## 17. Step 14: PostgreSQL (Docker)
+
+```bash
+bash bin/generate-jwt-keys.sh
+docker compose up --build
+```
+
+- **`database`** — Postgres 16 on host port **5434**
+- **`api`** — Symfony on host port **8002**
+- Migrations run on container startup
+
+Local `make serve` still uses SQLite (`var/data.db`).
+
+**Verify:**
+
+```bash
+curl http://localhost:8002/health
+docker compose exec database psql -U app -d app -c "\dt"
+```
+
+---
+
+## 18. Step 15: CI
+
+**`.github/workflows/ci.yml`** runs on every push to `main`:
+
+1. Generate JWT keys (`bin/generate-jwt-keys.sh`)
+2. Copy `.env.example` → `.env` (Composer post-install scripts need it)
+3. `composer install`
+4. `doctrine:migrations:migrate --env=test`
+5. `php bin/phpunit`
+
+**CI gotchas we hit:**
+
+| Problem | Fix |
+|---------|-----|
+| `Unable to read .env` | `cp .env.example .env` before `composer install` |
+| `LOCK_DSN` not found | Added `LOCK_DSN=flock` to `.env.example` |
+| JWT keys missing | Generate in CI step (keys are gitignored) |
+
+---
+
+## 19. Quick Reference
+
+| Goal | Command |
+|------|---------|
+| Copy env | `cp .env.example .env` |
+| Generate JWT keys | `bash bin/generate-jwt-keys.sh` |
+| Install deps | `composer install` |
+| Migrate | `php bin/console doctrine:migrations:migrate` |
+| Run local (SQLite) | `make serve` → http://127.0.0.1:8002 |
+| Run tests | `php bin/phpunit` |
+| Docker + Postgres | `docker compose up --build` |
+| Stop Docker | `docker compose down` |
+| List routes | `php bin/console debug:router` |
+| Symfony shell | `php bin/console` |
+
+### API endpoints
 
 | Path | Method | Auth | Purpose |
 |------|--------|------|---------|
@@ -271,11 +668,7 @@ php bin/phpunit
 | `/items/stats/summary` | GET | — | Item statistics |
 | `/items/{id}` | GET/PATCH/DELETE | JWT on writes | Item CRUD |
 
----
-
-## Environment Variables
-
-See `.env.example`:
+### Environment variables
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
@@ -283,10 +676,24 @@ See `.env.example`:
 | `APP_SECRET` | (required) | Symfony secret |
 | `JWT_SECRET_KEY` | `config/jwt/private.pem` | JWT signing |
 | `JWT_PUBLIC_KEY` | `config/jwt/public.pem` | JWT verification |
+| `LOCK_DSN` | `flock` | Required by RateLimiter |
 
 ---
 
-## How it fits the *-101 family
+## Compare with fastAPI-101
+
+Run both side by side:
+
+| | fastAPI-101 | symfony-101 |
+|--|-------------|-------------|
+| Port (local/Docker) | 8000 | 8002 |
+| Root message | `Hello from FastAPI!` | `Hello from symfony-101` |
+| API shape | Same endpoints | Same endpoints |
+| OpenAPI docs | `/docs` | Not included (future step) |
+| Admin UI | No | No |
+| Language | Python | PHP |
+
+### *-101 family ports
 
 | Repo | Port | Stack |
 |------|------|-------|
@@ -296,7 +703,7 @@ See `.env.example`:
 | go-101 | 8000 | Go port |
 | orchestr-101 | 3000 | Laravel-style Node |
 
-Run all three Python/PHP backends side by side and hit the same endpoints with the same curl commands.
+You now have the **same API** in Python (twice), PHP, Go, and Node — compare conventions, not unrelated toy apps.
 
 ---
 
@@ -306,3 +713,4 @@ Run all three Python/PHP backends side by side and hit the same endpoints with t
 - [Doctrine ORM](https://www.doctrine-project.org/projects/doctrine-orm/en/latest/index.html)
 - [LexikJWTAuthenticationBundle](https://github.com/lexik/LexikJWTAuthenticationBundle)
 - [fastAPI-101](https://github.com/iammikek/fastAPI-101) — reference API shape
+- [django-101](https://github.com/iammikek/django-101) — same tutorial style, Python monolith
