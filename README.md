@@ -99,7 +99,11 @@ symfony-101/
 │   ├── routes.yaml             # loads src/Controller/* attributes
 │   └── jwt/                    # RSA keys (gitignored)
 ├── migrations/                 # Doctrine migrations
-├── public/index.php            # Front controller (Laravel public/index.php)
+├── public/
+│   ├── index.php               # Front controller (Laravel public/index.php)
+│   ├── router.php              # PHP built-in server router (make serve)
+│   ├── serve-static.php        # Correct MIME types for shop CSS/JS
+│   └── shop/style.css
 ├── src/
 │   ├── Controller/             # HTTP layer
 │   │   ├── HealthController.php
@@ -115,7 +119,6 @@ symfony-101/
 │   ├── Exception/
 │   └── EventSubscriber/
 ├── templates/shop/             # Twig templates
-├── public/shop/style.css
 ├── docs/frontend.md
 ├── tests/
 │   ├── ApiTestCase.php
@@ -663,12 +666,16 @@ The shop calls **`ItemService` and `UserService` directly** — it does not fetc
 - **Symfony Forms** in `src/Form/`
 - **Dual firewalls** in `security.yaml` — `shop` (session + form_login) before `api` (JWT)
 - **Flash messages** via `ShopFlashSubscriber`
+- **Static assets** — `public/serve-static.php` is included from both `index.php` and `router.php` so the PHP built-in server returns `text/css` for `/shop/style.css` (browsers reject CSS served as `text/html`)
+- **Header “API” link** — jumps to `GET /items` and shows raw JSON in the browser (same data as the shop list, different format). No OpenAPI UI yet — see [Compare with fastAPI-101](#compare-with-fastapi-101).
 
 **Full walkthrough:** **[docs/frontend.md](docs/frontend.md)**
 
 ```bash
 make serve
 # http://127.0.0.1:8002/shop/register
+# http://127.0.0.1:8002/items          ← raw JSON (header “API” link)
+curl -I http://127.0.0.1:8002/shop/style.css   # Content-Type: text/css
 ```
 
 **Laravel parallel (for laravel-101):** Blade views + `web` middleware + session auth, sharing the same services as API routes.
@@ -685,6 +692,7 @@ make serve
 | Migrate | `php bin/console doctrine:migrations:migrate` |
 | Run local (SQLite) | `make serve` → http://127.0.0.1:8002 |
 | Open shop UI | http://127.0.0.1:8002/shop |
+| Raw JSON items | http://127.0.0.1:8002/items |
 | Frontend docs | [docs/frontend.md](docs/frontend.md) |
 | Run tests | `php bin/phpunit` |
 | Docker + Postgres | `docker compose up --build` |

@@ -82,7 +82,7 @@ symfony-101/
 └── config/packages/security.yaml # Dual firewalls: shop (session) + api (JWT)
 ```
 
-CSS is in `public/shop/style.css`, linked via `{{ asset('shop/style.css') }}`. **`make serve` uses `public/router.php`** so the PHP built-in server returns `text/css` for static files. Without it, `/shop/style.css` hits Symfony’s front controller and the browser gets HTML (strict mode MIME error).
+CSS is in `public/shop/style.css`, linked via `{{ asset('shop/style.css') }}`. Static files are served with correct MIME types via `public/serve-static.php` (included from both `index.php` and `router.php`). Without that, `/shop/style.css` would hit Symfony and return `text/html` (browser strict-mode MIME error).
 
 ---
 
