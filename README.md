@@ -742,17 +742,38 @@ Run both side by side:
 | Admin UI | No | No |
 | Language | Python | PHP |
 
-### *-101 family ports
+### *-101 Family
 
-| Repo | Port | Stack |
-|------|------|-------|
-| fastAPI-101 | 8000 | Python reference API |
-| django-101 | 8001 | Python monolith + admin + shop |
-| **symfony-101** | **8002** | **PHP API + shop (Laravel crossover)** |
-| go-101 | 8000 | Go port |
-| orchestr-101 | 3000 | Laravel-style Node |
+#### API backends
 
-You now have the **same API** in Python (twice), PHP, Go, and Node — compare conventions, not unrelated toy apps.
+| Repo | Port | Type | Stack |
+|------|------|------|-------|
+| [fastAPI-101](https://github.com/iammikek/fastAPI-101) | 8000 | API-only | FastAPI, SQLAlchemy |
+| [django-101](https://github.com/iammikek/django-101) | 8001 | Monolith | Django + DRF + shop |
+| [**symfony-101**](https://github.com/iammikek/symfony-101) | **8002** | Monolith | Symfony + shop |
+| [laravel-101](https://github.com/iammikek/laravel-101) | 8003 | Monolith | Laravel + shop |
+| [framework-x-101](https://github.com/iammikek/framework-x-101) | 8004 | Monolith | Framework X + shop |
+| [orchestr-101](https://github.com/iammikek/orchestr-101) | 8005 | Monolith | Orchestr + shop |
+| [nest-101](https://github.com/iammikek/nest-101) | 8006 | API-only | NestJS, TypeScript |
+| [express-101](https://github.com/iammikek/express-101) | 8007 | API-only | Express, Vitest |
+| [go-101](https://github.com/iammikek/go-101) | 8000* | API-only | Gin, GORM |
+
+\* go-101 also uses port 8000 — run one backend at a time, or change port in config.
+
+#### Other clients
+
+| Repo | Platform | Stack |
+|------|----------|-------|
+| [flutter-101](https://github.com/iammikek/flutter-101) | Mobile / desktop | Flutter (iOS, macOS, Android) |
+| [react-101](https://github.com/iammikek/react-101) | Web browser | React 19, Vite, Vitest |
+| [vue-101](https://github.com/iammikek/vue-101) | Web browser | Vue 3, Vite, Pinia |
+
+#### Suggested pairing
+
+- **Compare PHP stacks:** symfony-101 (8002) vs [laravel-101](https://github.com/iammikek/laravel-101) (8003) or [framework-x-101](https://github.com/iammikek/framework-x-101) (8004)
+- **Pair with a client:** [react-101](https://github.com/iammikek/react-101), [vue-101](https://github.com/iammikek/vue-101), or [flutter-101](https://github.com/iammikek/flutter-101)
+
+Catalogue: [automica.io/learning-101](https://automica.io/learning-101.html)
 
 ---
 
