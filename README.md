@@ -744,45 +744,7 @@ Run both side by side:
 
 ### *-101 Family
 
-#### API backends
-
-| Repo | Port | Type | Stack |
-|------|------|------|-------|
-| [fastAPI-101](https://github.com/iammikek/fastAPI-101) | 8000 | API-only | FastAPI, SQLAlchemy |
-| [django-101](https://github.com/iammikek/django-101) | 8001 | Monolith | Django + DRF + shop |
-| [**symfony-101**](https://github.com/iammikek/symfony-101) | **8002** | Monolith | Symfony + shop |
-| [laravel-101](https://github.com/iammikek/laravel-101) | 8003 | Monolith | Laravel + shop |
-| [framework-x-101](https://github.com/iammikek/framework-x-101) | 8004 | Monolith | Framework X + shop |
-| [orchestr-101](https://github.com/iammikek/orchestr-101) | 8005 | Monolith | Orchestr + shop |
-| [nest-101](https://github.com/iammikek/nest-101) | 8006 | API-only | NestJS, TypeScript |
-| [express-101](https://github.com/iammikek/express-101) | 8007 | API-only | Express, Vitest |
-| [go-101](https://github.com/iammikek/go-101) | 8000* | API-only | Gin, GORM |
-| [fortran-101](https://github.com/iammikek/fortran-101) | 8008 | API-only | Fortran, fpm |
-| [java-101](https://github.com/iammikek/java-101) | 8009 | API-only | Spring Boot, JPA, Flyway |
-| [dotNet-101](https://github.com/iammikek/dotNet-101) | 8010 | API-only | ASP.NET Core, xUnit |
-| [flask-101](https://github.com/iammikek/flask-101) | 8011 | API-only | Flask, pytest |
-| [rails-101](https://github.com/iammikek/rails-101) | 8012 | Monolith | Rails + shop |
-| [geblang-101](https://github.com/iammikek/geblang-101) | 8013 | API-only | Geblang, SQLite |
-| [gebweb-101](https://github.com/iammikek/gebweb-101) | 8014 | API-only | Geblang + Gebweb |
-| [sinatra-101](https://github.com/iammikek/sinatra-101)           | 8015  | API-only | Sinatra, RSpec               |
-\* go-101 also uses port 8000 — run one backend at a time, or change port in config.
-
-#### Other clients
-
-| Repo | Platform | Stack |
-|------|----------|-------|
-| [flutter-101](https://github.com/iammikek/flutter-101) | Mobile / desktop | Flutter (iOS, macOS, Android) |
-| [react-101](https://github.com/iammikek/react-101) | Web browser | React 19, Vite, Vitest |
-| [vue-101](https://github.com/iammikek/vue-101) | Web browser | Vue 3, Vite, Pinia |
-| [alpine-101](https://github.com/iammikek/alpine-101) | Web browser | Alpine.js, Vite, Vitest |
-
-#### Suggested pairing
-
-- **Compare PHP stacks:** symfony-101 (8002) vs [laravel-101](https://github.com/iammikek/laravel-101) (8003) or [framework-x-101](https://github.com/iammikek/framework-x-101) (8004)
-- **Into JVM:** [java-101](https://github.com/iammikek/java-101) (8009) after [laravel-101](https://github.com/iammikek/laravel-101)
-- **Pair with a client:** [react-101](https://github.com/iammikek/react-101), [vue-101](https://github.com/iammikek/vue-101), [alpine-101](https://github.com/iammikek/alpine-101), or [flutter-101](https://github.com/iammikek/flutter-101)
-
-Catalogue: [automica.io/learning-101](https://automica.io/learning-101.html)
+Full family list, ports, and clone-with-submodules: **[learning-101](https://github.com/iammikek/learning-101)**. Site catalogue: [automica.io/learning-101](https://automica.io/learning-101.html).
 
 ---
 
